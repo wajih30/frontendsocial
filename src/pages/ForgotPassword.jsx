@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/client';
+import { ArrowLeft, Mail, KeyRound, Lock } from 'lucide-react';
 
 const ForgotPassword = () => {
     const [step, setStep] = useState(1); // 1: email, 2: otp, 3: new password
@@ -20,7 +21,6 @@ const ForgotPassword = () => {
 
         try {
             await authAPI.forgotPassword(email.trim());
-
             setSuccess('A reset code has been sent to your email.');
             setTimeout(() => {
                 setSuccess('');
@@ -58,8 +58,8 @@ const ForgotPassword = () => {
             return;
         }
 
-        if (newPassword.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (newPassword.length < 8) {
+            setError('Password must be at least 8 characters long');
             return;
         }
 
@@ -67,7 +67,6 @@ const ForgotPassword = () => {
 
         try {
             await authAPI.resetPassword(email.trim(), otp.trim(), newPassword);
-
             setSuccess('Password reset successfully! Redirecting to login...');
             setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
@@ -77,123 +76,154 @@ const ForgotPassword = () => {
         }
     };
 
+    const getStepIcon = () => {
+        if (step === 1) return <Mail size={36} strokeWidth={1.5} />;
+        if (step === 2) return <KeyRound size={36} strokeWidth={1.5} />;
+        return <Lock size={36} strokeWidth={1.5} />;
+    };
+
+    const getStepTitle = () => {
+        if (step === 1) return 'Reset Password';
+        if (step === 2) return 'Verify Code';
+        return 'Create New Password';
+    };
+
+    const getStepDescription = () => {
+        if (step === 1) return "Enter your email address and we'll send you a code to reset your password.";
+        if (step === 2) return <>Enter the 6-digit code sent to<br /><strong className="text-white">{email}</strong></>;
+        return 'Create a strong password for your account.';
+    };
+
     return (
-        <div className="auth-container">
-            <div className="auth-card fade-in">
-                <h1 className="auth-logo">SocialApp</h1>
-                <h2 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '16px' }}>
-                    {step === 1 && 'Reset Password'}
-                    {step === 2 && 'Verify Code'}
-                    {step === 3 && 'Create New Password'}
-                </h2>
+        <div className="min-h-screen flex items-center justify-center p-4 bg-black">
+            <div className="w-full max-w-[350px] flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
 
-                {/* Step 1: Email Input */}
-                {step === 1 && (
-                    <form onSubmit={handleRequestOTP}>
-                        {error && <div className="error-message">{error}</div>}
-                        {success && <div className="success-message">{success}</div>}
+                {/* Logo Area */}
+                <div className="mb-8 flex flex-col items-center">
+                    <div className="w-16 h-16 bg-white rounded-[18px] flex items-center justify-center text-black mb-4 shadow-[0_0_40px_rgba(255,255,255,0.15)]">
+                        {getStepIcon()}
+                    </div>
+                    <h1 className="text-white text-[20px] font-bold">{getStepTitle()}</h1>
+                </div>
 
-                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px' }}>
-                            Enter your email address and we'll send you a code to reset your password.
-                        </p>
+                {/* Main Card */}
+                <div className="w-full border border-[#ffffff15] rounded-xl p-6 md:p-8 bg-[#0a0a0a]">
+                    {error && (
+                        <div className="mb-4 bg-[#ff3040]/10 border border-[#ff3040]/20 text-[#ff3040] py-2.5 px-3 rounded-lg text-sm text-center font-medium">
+                            {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="mb-4 bg-green-500/10 border border-green-500/20 text-green-500 py-2.5 px-3 rounded-lg text-sm text-center font-medium">
+                            {success}
+                        </div>
+                    )}
 
-                        <div className="input-group">
+                    <p className="text-center text-[#777] text-[14px] mb-6">
+                        {getStepDescription()}
+                    </p>
+
+                    {/* Step 1: Email Input */}
+                    {step === 1 && (
+                        <form onSubmit={handleRequestOTP} className="flex flex-col gap-3">
                             <input
                                 type="email"
-                                placeholder="Email"
+                                placeholder="Email address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
+                                className="bg-[#1a1a1a] border border-[#333] text-white text-[14px] rounded-[5px] px-4 py-2.5 outline-none focus:border-[#777] transition-colors placeholder-[#777]"
                             />
-                        </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="mt-2 bg-[#0095f6] hover:bg-[#1877f2] text-white font-bold text-[14px] py-2 rounded-[8px] transition-all disabled:opacity-50 active:scale-[0.98]"
+                            >
+                                {loading ? 'Sending...' : 'Send Reset Code'}
+                            </button>
+                        </form>
+                    )}
 
-                        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%' }}>
-                            {loading ? 'Sending...' : 'Send Reset Code'}
-                        </button>
-                    </form>
-                )}
-
-                {/* Step 2: OTP Verification */}
-                {step === 2 && (
-                    <form onSubmit={handleVerifyOTP}>
-                        {error && <div className="error-message">{error}</div>}
-                        {success && <div className="success-message">{success}</div>}
-
-                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px' }}>
-                            Enter the 6-digit code sent to<br /><strong>{email}</strong>
-                        </p>
-
-                        <div className="input-group">
+                    {/* Step 2: OTP Verification */}
+                    {step === 2 && (
+                        <form onSubmit={handleVerifyOTP} className="flex flex-col gap-3">
                             <input
                                 type="text"
                                 placeholder="6-digit code"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                 maxLength="6"
-                                style={{ textAlign: 'center', fontSize: '20px', letterSpacing: '8px' }}
-                                required
+                                className="bg-[#1a1a1a] border border-[#333] text-white text-[20px] rounded-[5px] px-4 py-3 outline-none focus:border-[#777] transition-colors placeholder-[#777] text-center tracking-[8px] font-mono"
                             />
-                        </div>
+                            <button
+                                type="submit"
+                                className="mt-2 bg-[#0095f6] hover:bg-[#1877f2] text-white font-bold text-[14px] py-2 rounded-[8px] transition-all active:scale-[0.98]"
+                            >
+                                Verify Code
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="text-[#777] text-[13px] hover:text-white transition-colors mt-1"
+                            >
+                                ← Change email
+                            </button>
+                        </form>
+                    )}
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                            Verify Code
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setStep(1)}
-                            style={{
-                                width: '100%',
-                                marginTop: '12px',
-                                background: 'transparent',
-                                color: 'var(--text-secondary)',
-                                border: 'none',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            ← Change email
-                        </button>
-                    </form>
-                )}
-
-                {/* Step 3: New Password */}
-                {step === 3 && (
-                    <form onSubmit={handleResetPassword}>
-                        {error && <div className="error-message">{error}</div>}
-                        {success && <div className="success-message">{success}</div>}
-
-                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px' }}>
-                            Create a strong password for your account.
-                        </p>
-
-                        <div className="input-group">
+                    {/* Step 3: New Password */}
+                    {step === 3 && (
+                        <form onSubmit={handleResetPassword} className="flex flex-col gap-3">
                             <input
                                 type="password"
-                                placeholder="New Password"
+                                placeholder="New password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 required
+                                className="bg-[#1a1a1a] border border-[#333] text-white text-[14px] rounded-[5px] px-4 py-2.5 outline-none focus:border-[#777] transition-colors placeholder-[#777]"
                             />
-                        </div>
-
-                        <div className="input-group">
                             <input
                                 type="password"
-                                placeholder="Confirm New Password"
+                                placeholder="Confirm new password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
+                                className="bg-[#1a1a1a] border border-[#333] text-white text-[14px] rounded-[5px] px-4 py-2.5 outline-none focus:border-[#777] transition-colors placeholder-[#777]"
                             />
-                        </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="mt-2 bg-[#0095f6] hover:bg-[#1877f2] text-white font-bold text-[14px] py-2 rounded-[8px] transition-all disabled:opacity-50 active:scale-[0.98]"
+                            >
+                                {loading ? 'Resetting...' : 'Reset Password'}
+                            </button>
+                        </form>
+                    )}
 
-                        <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%' }}>
-                            {loading ? 'Resetting...' : 'Reset Password'}
-                        </button>
-                    </form>
-                )}
+                    <div className="flex items-center gap-4 my-6">
+                        <div className="h-[1px] bg-[#333] flex-1"></div>
+                        <span className="text-[#777] text-[12px] font-bold uppercase">OR</span>
+                        <div className="h-[1px] bg-[#333] flex-1"></div>
+                    </div>
 
-                <div className="auth-link">
-                    <Link to="/login">← Back to login</Link>
+                    <div className="text-center">
+                        <Link to="/login" className="text-[12px] text-white hover:text-[#ccc] transition-colors flex items-center justify-center gap-1">
+                            <ArrowLeft size={14} />
+                            Back to login
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Signup Link */}
+                <div className="w-full border border-[#ffffff15] rounded-xl p-5 bg-[#0a0a0a] mt-3 text-center">
+                    <span className="text-[14px] text-white">Don't have an account? </span>
+                    <Link to="/signup" className="text-[#0095f6] font-bold text-[14px] hover:text-[#0095f6]/80">
+                        Sign up
+                    </Link>
+                </div>
+
+                <div className="mt-6 text-center text-[#555] text-[12px]">
+                    <p>&copy; 2026 Social from Meta</p>
                 </div>
             </div>
         </div>
