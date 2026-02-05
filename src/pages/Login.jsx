@@ -49,7 +49,7 @@ const Login = () => {
                     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                         <input
                             type="text"
-                            placeholder="Username, email or mobile number"
+                            placeholder="Email or mobile number"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             required
