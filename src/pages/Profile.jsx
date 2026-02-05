@@ -1,21 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { Camera, Grid, User as UserIcon, Settings, Edit3, Share2 } from 'lucide-react';
-import { usersAPI, socialAPI, uploadAPI } from '../api/client';
+import { usersAPI, socialAPI, uploadAPI, API_BASE_URL } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import UserListModal from '../components/UserListModal';
 
 const Profile = () => {
     const [posts, setPosts] = useState([]);
+    const [followers, setFollowers] = useState([]);
+    const [following, setFollowing] = useState([]);
+    const [showFollowers, setShowFollowers] = useState(false);
+    const [showFollowing, setShowFollowing] = useState(false);
+
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
     const { user, fetchUser } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (user) {
-            fetchPosts();
+            fetchAllData();
             setFormData({
                 username: user.username,
                 full_name: user.full_name || '',
@@ -24,12 +32,18 @@ const Profile = () => {
         }
     }, [user]);
 
-    const fetchPosts = async () => {
+    const fetchAllData = async () => {
         try {
-            const response = await socialAPI.getUserPosts(user.id);
-            setPosts(response.data);
+            const [postsRes, followersRes, followingRes] = await Promise.all([
+                socialAPI.getUserPosts(user.id),
+                socialAPI.getFollowers(user.id),
+                socialAPI.getFollowing(user.id)
+            ]);
+            setPosts(postsRes.data);
+            setFollowers(followersRes.data);
+            setFollowing(followingRes.data);
         } catch (error) {
-            console.error('Failed to fetch posts:', error);
+            console.error('Failed to fetch profile data:', error);
         } finally {
             setLoading(false);
         }
@@ -39,12 +53,15 @@ const Profile = () => {
         const file = e.target.files[0];
         if (!file) return;
 
+        setUploading(true);
         try {
             const uploadResponse = await uploadAPI.uploadFile(file);
             await usersAPI.updateMe({ profile_picture_url: uploadResponse.data.url });
             await fetchUser();
         } catch (error) {
             console.error('Failed to update profile picture:', error);
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -77,16 +94,21 @@ const Profile = () => {
                 <div className="absolute -bottom-16 left-6 md:left-12">
                     <div className="relative group">
                         <div
-                            className="w-[120px] h-[120px] md:w-[150px] md:h-[150px] rounded-full bg-[#141414] border-[6px] border-[#0f0f0f] flex items-center justify-center overflow-hidden cursor-pointer shadow-2xl"
+                            className={`w-[120px] h-[120px] md:w-[150px] md:h-[150px] rounded-full bg-[#141414] border-[6px] border-[#0f0f0f] flex items-center justify-center overflow-hidden cursor-pointer shadow-2xl relative transition-all ${uploading ? 'opacity-50' : ''}`}
                             onClick={() => fileInputRef.current?.click()}
                         >
                             {user.profile_picture_url ? (
-                                <img src={`http://127.0.0.1:8000${user.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                                <img src={`${API_BASE_URL}${user.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <span className="text-white text-5xl font-bold">{user.username[0].toUpperCase()}</span>
                             )}
+                            {uploading && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                    <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                                </div>
+                            )}
                         </div>
-                        <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none border-[6px] border-transparent">
+                        <div className={`absolute inset-0 rounded-full bg-black/50 transition-opacity flex items-center justify-center pointer-events-none border-[6px] border-transparent ${editing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                             <Camera className="text-white" size={32} />
                         </div>
                         <input
@@ -118,13 +140,19 @@ const Profile = () => {
                                         <span className="font-bold text-white text-[18px]">{posts.length}</span>
                                         <span className="text-[#777] text-[13px] uppercase tracking-wide font-semibold">Posts</span>
                                     </div>
-                                    <div className="flex flex-col items-center md:items-start opacity-70">
-                                        <span className="font-bold text-white text-[18px]">0</span>
-                                        <span className="text-[#777] text-[13px] uppercase tracking-wide font-semibold">Followers</span>
+                                    <div
+                                        className="flex flex-col items-center md:items-start cursor-pointer group"
+                                        onClick={() => setShowFollowers(true)}
+                                    >
+                                        <span className="font-bold text-white text-[18px] group-hover:text-indigo-400 transition-colors">{followers.length}</span>
+                                        <span className="text-[#777] text-[13px] uppercase tracking-wide font-semibold group-hover:text-[#a3a3a3] transition-colors">Followers</span>
                                     </div>
-                                    <div className="flex flex-col items-center md:items-start opacity-70">
-                                        <span className="font-bold text-white text-[18px]">0</span>
-                                        <span className="text-[#777] text-[13px] uppercase tracking-wide font-semibold">Following</span>
+                                    <div
+                                        className="flex flex-col items-center md:items-start cursor-pointer group"
+                                        onClick={() => setShowFollowing(true)}
+                                    >
+                                        <span className="font-bold text-white text-[18px] group-hover:text-indigo-400 transition-colors">{following.length}</span>
+                                        <span className="text-[#777] text-[13px] uppercase tracking-wide font-semibold group-hover:text-[#a3a3a3] transition-colors">Following</span>
                                     </div>
                                 </div>
                             </>
@@ -158,9 +186,12 @@ const Profile = () => {
                                     <Edit3 size={16} />
                                     Edit Profile
                                 </button>
-                                <button className="flex items-center gap-2 px-5 py-2.5 bg-[#ffffff08] hover:bg-[#ffffff10] text-white text-[14px] font-semibold rounded-full border border-[#ffffff08] transition-all active:scale-95">
-                                    <Share2 size={16} />
-                                    Share
+                                <button
+                                    onClick={() => navigate('/settings')}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-[#ffffff08] hover:bg-[#ffffff10] text-white text-[14px] font-semibold rounded-full border border-[#ffffff08] transition-all active:scale-95"
+                                >
+                                    <Settings size={16} />
+                                    Settings
                                 </button>
                             </>
                         ) : (
@@ -201,7 +232,7 @@ const Profile = () => {
                         <div className="w-20 h-20 rounded-2xl bg-[#141414] border border-[#ffffff08] flex items-center justify-center mb-6">
                             <Camera size={40} strokeWidth={1} className="text-[#333]" />
                         </div>
-                        <h2 className="text-[20px] font-bold text-white mb-2">No Posts Yet</h2>
+                        <h2 className="text-[20px] font-bold text-white mb-2">No posts yet</h2>
                         <p className="text-[15px] text-[#777]">Share your moments with the world.</p>
                         <Link to="/new-post" className="mt-6 text-indigo-400 font-bold text-[14px] hover:text-indigo-300 transition-colors">Create your first post</Link>
                     </div>
@@ -241,6 +272,22 @@ const Profile = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modals */}
+            {showFollowers && (
+                <UserListModal
+                    title="Followers"
+                    users={followers}
+                    onClose={() => setShowFollowers(false)}
+                />
+            )}
+            {showFollowing && (
+                <UserListModal
+                    title="Following"
+                    users={following}
+                    onClose={() => setShowFollowing(false)}
+                />
+            )}
         </div>
     );
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search as SearchIcon, X, History } from 'lucide-react';
-import { usersAPI } from '../api/client';
+import { usersAPI, API_BASE_URL } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const Search = () => {
@@ -11,13 +11,19 @@ const Search = () => {
     const [recentSearches, setRecentSearches] = useState([]);
     const { user } = useAuth();
 
+    // User-specific localStorage key
+    const storageKey = user ? `recentSearches_${user.id}` : 'recentSearches';
+
     // Load recent searches from localStorage
     useEffect(() => {
-        const saved = localStorage.getItem('recentSearches');
+        if (!user) return;
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
             setRecentSearches(JSON.parse(saved));
+        } else {
+            setRecentSearches([]);
         }
-    }, []);
+    }, [user, storageKey]);
 
     // Debounced search
     useEffect(() => {
@@ -44,18 +50,18 @@ const Search = () => {
     const handleUserClick = (clickedUser) => {
         const updated = [clickedUser, ...recentSearches.filter(u => u.id !== clickedUser.id)].slice(0, 10);
         setRecentSearches(updated);
-        localStorage.setItem('recentSearches', JSON.stringify(updated));
+        localStorage.setItem(storageKey, JSON.stringify(updated));
     };
 
     const clearRecentSearches = () => {
         setRecentSearches([]);
-        localStorage.removeItem('recentSearches');
+        localStorage.removeItem(storageKey);
     };
 
     const removeRecentSearch = (userId) => {
         const updated = recentSearches.filter(u => u.id !== userId);
         setRecentSearches(updated);
-        localStorage.setItem('recentSearches', JSON.stringify(updated));
+        localStorage.setItem(storageKey, JSON.stringify(updated));
     };
 
     return (
@@ -109,7 +115,7 @@ const Search = () => {
                                 >
                                     <div className="w-11 h-11 rounded-full bg-[#1a1a1a] flex-shrink-0 flex items-center justify-center overflow-hidden border border-[#ffffff15]">
                                         {searchUser.profile_picture_url ? (
-                                            <img src={`http://127.0.0.1:8000${searchUser.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                                            <img src={`${API_BASE_URL}${searchUser.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <span className="text-[15px] font-bold text-white">{searchUser.username[0].toUpperCase()}</span>
                                         )}
@@ -150,7 +156,7 @@ const Search = () => {
                                             >
                                                 <div className="w-11 h-11 rounded-full bg-[#1a1a1a] flex-shrink-0 flex items-center justify-center overflow-hidden border border-[#ffffff15]">
                                                     {recentUser.profile_picture_url ? (
-                                                        <img src={`http://127.0.0.1:8000${recentUser.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                                                        <img src={`${API_BASE_URL}${recentUser.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                                                     ) : (
                                                         <span className="text-[15px] font-bold text-white">{recentUser.username[0].toUpperCase()}</span>
                                                     )}

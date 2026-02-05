@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Search, PlusSquare, Heart, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../api/client';
 import { useState } from 'react';
 
 const Sidebar = () => {
@@ -33,7 +34,7 @@ const Sidebar = () => {
             to: `/user/${user?.username}`,
             icon: user?.profile_picture_url ? (
                 <img
-                    src={`http://127.0.0.1:8000${user.profile_picture_url}`}
+                    src={`${API_BASE_URL}${user.profile_picture_url}`}
                     alt="Profile"
                     className="w-7 h-7 rounded-full object-cover border border-white/20"
                 />

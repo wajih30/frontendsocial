@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Image, X, ChevronLeft, UploadCloud } from 'lucide-react';
-import { socialAPI, uploadAPI } from '../api/client';
+import { socialAPI, uploadAPI, API_BASE_URL } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const NewPost = () => {
@@ -96,7 +96,7 @@ const NewPost = () => {
                         <div className="flex-shrink-0">
                             <div className="w-11 h-11 rounded-full bg-[#1a1a1a] border border-[#ffffff08] overflow-hidden">
                                 {user?.profile_picture_url ? (
-                                    <img src={`http://127.0.0.1:8000${user?.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                                    <img src={`${API_BASE_URL}${user?.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                                         {user?.username[0].toUpperCase()}

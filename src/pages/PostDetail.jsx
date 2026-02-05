@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { socialAPI } from '../api/client';
+import { socialAPI, API_BASE_URL } from '../api/client';
 import PostCard from '../components/PostCard';
 import { ArrowLeft, Send, Trash2, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +13,7 @@ const PostDetail = () => {
     const [loading, setLoading] = useState(true);
     const [commentText, setCommentText] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchPost();
@@ -24,6 +25,7 @@ const PostDetail = () => {
             setPost(response.data);
         } catch (error) {
             console.error('Failed to fetch post:', error);
+            setError('Post not found or network error');
         } finally {
             setLoading(false);
         }
@@ -35,7 +37,7 @@ const PostDetail = () => {
 
         setSubmitting(true);
         try {
-            const response = await socialAPI.createComment(post.id, { comment_text: commentText });
+            const response = await socialAPI.createComment(post.id, commentText);
             setPost(curr => ({
                 ...curr,
                 comments: [response.data, ...curr.comments],
@@ -44,6 +46,7 @@ const PostDetail = () => {
             setCommentText('');
         } catch (error) {
             console.error('Failed to add comment:', error);
+            setError(error.response?.data?.detail || 'Failed to add reply');
         } finally {
             setSubmitting(false);
         }
@@ -60,6 +63,7 @@ const PostDetail = () => {
             }));
         } catch (error) {
             console.error('Failed to delete comment:', error);
+            setError(error.response?.data?.detail || 'Failed to delete reply');
         }
     };
 
@@ -81,6 +85,17 @@ const PostDetail = () => {
 
     return (
         <div className="min-h-screen pb-24 max-w-2xl mx-auto border-x border-[#ffffff05]">
+            {error && (
+                <div className="mx-4 mt-4 mb-2 bg-[#ff3040]/10 text-[#ff3040] px-4 py-3 rounded-xl text-sm font-medium border border-[#ff3040]/20 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#ff3040]"></span>
+                        {error}
+                    </div>
+                    <button onClick={() => setError(null)} className="text-[#ff3040] hover:text-white transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
             {/* Header */}
             <div className="sticky top-0 z-30 bg-black/85 backdrop-blur-xl border-b border-[#ffffff15] px-4 h-[54px] flex items-center gap-4">
                 <button
@@ -114,7 +129,7 @@ const PostDetail = () => {
             <div className="px-4 py-4 flex gap-3 border-b border-[#ffffff10]">
                 <div className="w-9 h-9 rounded-full bg-[#1a1a1a] border border-[#ffffff15] overflow-hidden flex-shrink-0">
                     {currentUser?.profile_picture_url ? (
-                        <img src={`http://127.0.0.1:8000${currentUser.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                        <img src={`${API_BASE_URL}${currentUser.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs">
                             {currentUser?.username[0].toUpperCase()}
@@ -154,7 +169,7 @@ const PostDetail = () => {
                             className="w-9 h-9 rounded-full bg-[#1a1a1a] border border-[#ffffff15] overflow-hidden cursor-pointer flex-shrink-0"
                         >
                             {comment.user.profile_picture_url ? (
-                                <img src={`http://127.0.0.1:8000${comment.user.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                                <img src={`${API_BASE_URL}${comment.user.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                                     {comment.user.username[0].toUpperCase()}

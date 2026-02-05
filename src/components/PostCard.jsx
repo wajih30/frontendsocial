@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Send, MoreHorizontal, Trash2, Repeat } from 'lucide-react';
-import { socialAPI } from '../api/client';
+import { socialAPI, API_BASE_URL } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 
@@ -62,7 +62,7 @@ const PostCard = ({ post, onLikeToggle, onDelete }) => {
                         className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#ffffff08] overflow-hidden cursor-pointer"
                     >
                         {post.owner.profile_picture_url ? (
-                            <img src={`http://127.0.0.1:8000${post.owner.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                            <img src={`${API_BASE_URL}${post.owner.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                                 {post.owner.username[0].toUpperCase()}
@@ -111,7 +111,7 @@ const PostCard = ({ post, onLikeToggle, onDelete }) => {
                 {post.media_url && (
                     <div className="rounded-xl overflow-hidden mb-3 border border-[#ffffff08]">
                         <img
-                            src={`http://127.0.0.1:8000${post.media_url}`}
+                            src={`${API_BASE_URL}${post.media_url}`}
                             alt=""
                             className="w-full h-auto max-h-[500px] object-cover"
                             onClick={(e) => e.stopPropagation()}
@@ -126,8 +126,8 @@ const PostCard = ({ post, onLikeToggle, onDelete }) => {
                     <button
                         onClick={handleLike}
                         className={`flex items-center gap-2 text-[14px] font-medium transition-colors ${post.is_liked_by_me
-                                ? 'text-[#ff3040]'
-                                : 'text-[#a3a3a3] hover:text-white'
+                            ? 'text-[#ff3040]'
+                            : 'text-[#a3a3a3] hover:text-white'
                             }`}
                     >
                         <Heart

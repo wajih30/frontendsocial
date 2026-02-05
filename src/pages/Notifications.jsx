@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, UserPlus, AtSign, ArrowRight } from 'lucide-react';
-import { notificationsAPI } from '../api/client';
+import { notificationsAPI, API_BASE_URL } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const Notifications = () => {
@@ -94,7 +94,7 @@ const Notifications = () => {
                                         className="block w-10 h-10 rounded-full bg-[#1a1a1a] overflow-hidden border border-[#ffffff15]"
                                     >
                                         {notification.sender.profile_picture_url ? (
-                                            <img src={`http://127.0.0.1:8000${notification.sender.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
+                                            <img src={`${API_BASE_URL}${notification.sender.profile_picture_url}`} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                                                 {notification.sender.username[0].toUpperCase()}

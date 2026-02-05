@@ -1,12 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+export const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    headers: {},
 });
 
 // Add auth token to requests
@@ -19,14 +17,80 @@ api.interceptors.request.use((config) => {
 });
 
 // Handle 401 errors
+// Handle 401 errors and Token Refresh
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            window.location.href = '/login';
+    async (error) => {
+        const originalRequest = error.config;
+
+        // If error is 401 and we haven't already retried
+        const isAuthRequest = originalRequest.url.includes('/auth/');
+
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
+
+            if (isRefreshing) {
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                })
+                    .then((token) => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        return api(originalRequest);
+                    })
+                    .catch((err) => Promise.reject(err));
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            try {
+                const refreshToken = localStorage.getItem('refresh_token');
+
+                if (!refreshToken) {
+                    throw new Error('No refresh token');
+                }
+
+                // Call refresh endpoint
+                // Note: backend expects refresh_token as query param based on signature
+                const response = await axios.post(
+                    `${API_BASE_URL}/auth/refresh?refresh_token=${refreshToken}`
+                );
+
+                const { access_token, refresh_token: newRefreshToken } = response.data;
+
+                localStorage.setItem('access_token', access_token);
+                localStorage.setItem('refresh_token', newRefreshToken);
+
+                api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+                originalRequest.headers.Authorization = `Bearer ${access_token}`;
+
+                processQueue(null, access_token);
+                return api(originalRequest);
+
+            } catch (refreshError) {
+                processQueue(refreshError, null);
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                window.location.href = '/login';
+                return Promise.reject(refreshError);
+            } finally {
+                isRefreshing = false;
+            }
         }
+
         return Promise.reject(error);
     }
 );
@@ -71,10 +135,12 @@ export const socialAPI = {
     deletePost: (postId) => api.delete(`/social/${postId}`),
     likePost: (postId) => api.post(`/social/${postId}/like`),
     unlikePost: (postId) => api.delete(`/social/${postId}/like`),
-    addComment: (postId, text) => api.post(`/social/${postId}/comment`, { comment_text: text }),
+    createComment: (postId, text) => api.post(`/social/${postId}/comment`, { comment_text: text }),
     deleteComment: (commentId) => api.delete(`/social/comments/${commentId}`),
     follow: (userId) => api.post(`/social/${userId}/follow`),
     unfollow: (userId) => api.delete(`/social/${userId}/follow`),
+    getFollowers: (userId) => api.get(`/social/${userId}/followers`),
+    getFollowing: (userId) => api.get(`/social/${userId}/following`),
 };
 
 // Notifications API
@@ -82,7 +148,6 @@ export const notificationsAPI = {
     getNotifications: (skip = 0, limit = 20) =>
         api.get(`/notifications/?skip=${skip}&limit=${limit}`),
     getUnreadCount: () => api.get('/notifications/unread-count'),
-    markAsRead: (id) => api.post(`/notifications/${id}/read`),
     markAllAsRead: () => api.post('/notifications/read-all'),
 };
 
@@ -92,10 +157,14 @@ export const uploadAPI = {
     uploadFile: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return api.post('/upload/', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        return api.post('/upload/', formData);
     },
 };
+
+// AI API
+export const aiAPI = {
+    generateBio: (keywords) => api.post('/ai/generate-bio', { keywords }),
+};
+
 
 export default api;
